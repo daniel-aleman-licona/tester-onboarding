@@ -1,6 +1,6 @@
 #root { min-height: 100vh; }
 .shell, .admin-shell { min-height: 100vh; display: flex; flex-direction: column; }
-.topbar { height: 76px; padding: 0 max(5.4vw, calc((100vw - 1180px)/2)); display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(0,0,0,.07); }
+.topbar { height: 76px; padding: 0 max(5.4vw, calc((100vw - 1180px)/2)); display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(0,0,0,.07); background:#000; color:#171717; font-size:13px; font-weight:600; }
 .brand { display:flex; align-items:center; gap:10px; text-decoration:none; font:800 14px Manrope,sans-serif; letter-spacing:.035em; }
 .brand-logo { display:block; width:112px; height:56px; object-fit:contain; }
 .brand-mark { width:30px; height:30px; display:grid; place-items:center; border-radius:9px; background:#e5131f; color:#fff; font-size:17px; }
