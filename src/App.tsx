@@ -51,6 +51,7 @@ function Onboarding() {
   const [session, setSession] = useState<Session|null>(() => { try { return JSON.parse(sessionStorage.getItem(sessionKey) ?? 'null') as Session|null } catch { return null } })
   const [answers, setAnswers] = useState<Answers>(() => { try { return JSON.parse(sessionStorage.getItem('qa-answers') ?? '{}') as Answers } catch { return {} } })
   const [index, setIndex] = useState(0)
+  const [timeLeft, setTimeLeft] = useState(30)
   const [focusCount, setFocusCount] = useState(Number(sessionStorage.getItem('qa-focus') ?? 0))
   const focusRef = useRef(Number(sessionStorage.getItem('qa-focus') ?? 0))
   const lastFocus = useRef(0)
@@ -72,6 +73,12 @@ function Onboarding() {
   }, [answers.skills])
   const allQuestions = [...questions.map((q) => ({ ...q, multi:false })), { ...skillQuestion, multi:true }, ...branchQuestions]
   useEffect(() => { setIndex((current) => Math.min(current, allQuestions.length - 1)) }, [allQuestions.length])
+  useEffect(() => { setTimeLeft(30) }, [index, stage])
+  useEffect(() => {
+    if (stage !== 'questions') return
+    const timer = window.setInterval(() => setTimeLeft((remaining) => Math.max(remaining - 1, 0)), 1000)
+    return () => window.clearInterval(timer)
+  }, [stage, index])
   useEffect(() => { if (session) { setStage((current) => current === 'intro' || current === 'identity' ? 'questions' : current) } }, [session])
   async function cancel(count: number) {
     if (!session) return
@@ -116,6 +123,20 @@ function Onboarding() {
       if(index<allQuestions.length-1)setIndex(index+1);else setStage('practice')
     } catch(e) { setError(e instanceof Error ? e.message : 'No se pudieron guardar tus respuestas.') } finally { setBusy(false) }
   }
+  async function skipTimedOutQuestion() {
+    setError('')
+    if (session) {
+      try {
+        if (supabase) await intake('save', { id:session.id, token:session.token, answers, focus_events:focusCount })
+        else updateLocal(session.id, { answers, focus_events:focusCount })
+      } catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron guardar tus respuestas.'); return }
+    }
+    if (index < allQuestions.length - 1) setIndex(index + 1)
+    else setStage('practice')
+  }
+  useEffect(() => {
+    if (stage === 'questions' && timeLeft === 0) void skipTimedOutQuestion()
+  }, [timeLeft, stage])
   async function complete(event:FormEvent) {
     event.preventDefault(); setError('')
     if(reports.some((item)=>item.description.trim().length<20||!item.severity)){setError('Describe cada hallazgo con al menos 20 caracteres y selecciona su severidad.');return}
@@ -133,7 +154,7 @@ function Onboarding() {
     {notice&&<div className="notice" role="alert">{notice}</div>}
     {stage==='intro'&&<section className="intro-card"><div className="eyebrow"><span className="eyebrow-dot"/> NUEVA APLICACIÓN</div><h1>Tu ojo encuentra<br/>lo que otros pasan por alto.</h1><p className="intro-copy">Cuéntanos cómo pruebas. Responde algunas preguntas y resuelve un reto práctico para que podamos recomendarte pruebas que encajan contigo.</p><div className="intro-meta"><span>◷ &nbsp;8–12 min</span><span>⌁ &nbsp;Preguntas + reto QA</span></div><button className="primary" onClick={()=>setStage('identity')}>Comenzar evaluación <span>→</span></button><p className="privacy-note">Tus respuestas se usarán para evaluar tu perfil de testing.</p></section>}
     {stage==='identity'&&<section className="question-card"><div className="eyebrow">ANTES DE COMENZAR</div><h2>¿Cómo te llamamos?</h2><p className="subcopy">Usaremos estos datos para asociar tu evaluación a tu perfil.</p><form className="identity-form" onSubmit={begin}><label>Nombre completo<input required maxLength={120} autoComplete="name" value={name} onChange={e=>setName(e.target.value)} placeholder="Tu nombre"/></label><label>Correo electrónico<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@correo.com"/></label>{error&&<p className="error">{error}</p>}<button className="primary" disabled={busy}>{busy?'Iniciando…':'Continuar'} <span>→</span></button></form></section>}
-    {stage==='questions'&&<section className="question-card" key={allQuestions[index]?.id}><div className="question-kicker">PREGUNTA {index+1} <span>·</span> PERFIL QA</div><h2>{allQuestions[index]?.title}</h2><p className="subcopy">{allQuestions[index]?.hint}</p><div className="answer-list">{allQuestions[index]?.options.map((option,i)=>{const q=allQuestions[index];const selected=q.multi?((answers[q.id] as string[]|undefined)??[]).includes(option):answers[q.id]===String(i);return <button key={option} className={`answer ${selected?'selected':''}`} aria-pressed={selected} onClick={()=>q.multi?changeAnswer(q.id,selected?((answers[q.id] as string[]).filter(v=>v!==option)): [...((answers[q.id] as string[]|undefined)??[]),option]):changeAnswer(q.id,String(i))}><span className={q.multi?'check':'radio'}>{selected?'✓':''}</span>{option}</button>})}</div>{error&&<p className="error">{error}</p>}<div className="card-actions"><button className="text-button" disabled={!index} onClick={()=>index&&setIndex(index-1)}>← Anterior</button><button className="primary compact" disabled={busy} onClick={()=>void next()}>{busy?'Guardando…':'Siguiente pregunta'} <span>→</span></button></div></section>}
+    {stage==='questions'&&<section className="question-card" key={allQuestions[index]?.id}><div className="question-topline"><div className="question-kicker">PREGUNTA {index+1} <span>·</span> PERFIL QA</div><div className={`question-timer ${timeLeft<=10?'urgent':''}`} role="timer" aria-label={`Tiempo restante: ${timeLeft} segundos`}>00:{String(timeLeft).padStart(2,'0')}</div></div><h2>{allQuestions[index]?.title}</h2><p className="subcopy">{allQuestions[index]?.hint}</p><div className="answer-list">{allQuestions[index]?.options.map((option,i)=>{const q=allQuestions[index];const selected=q.multi?((answers[q.id] as string[]|undefined)??[]).includes(option):answers[q.id]===String(i);return <button key={option} className={`answer ${selected?'selected':''}`} aria-pressed={selected} onClick={()=>q.multi?changeAnswer(q.id,selected?((answers[q.id] as string[]).filter(v=>v!==option)): [...((answers[q.id] as string[]|undefined)??[]),option]):changeAnswer(q.id,String(i))}><span className={q.multi?'check':'radio'}>{q.multi&&selected?'✓':''}</span>{option}</button>})}</div>{error&&<p className="error">{error}</p>}<div className="card-actions"><button className="text-button" disabled={!index} onClick={()=>index&&setIndex(index-1)}>← Anterior</button><button className="primary compact" disabled={busy} onClick={()=>void next()}>{busy?'Guardando…':'Siguiente pregunta'} <span>→</span></button></div></section>}
     {stage==='practice'&&<section className="practice-card"><div className="practice-heading"><div><div className="question-kicker">RETO PRÁCTICO <span>·</span> TIENDA DEMO</div><h2>Prueba este resumen de compra</h2><p className="subcopy">Explora la pantalla como en una prueba real. Luego reporta cada problema con pasos, resultado actual y esperado.</p></div><span className="demo-badge">ENTORNO DE PRUEBA</span></div><DemoStore quantity={quantity} setQuantity={setQuantity} coupon={coupon} setCoupon={setCoupon} applied={couponApplied} setApplied={setCouponApplied}/><form className="report-form" onSubmit={complete}><div className="report-title"><div><h3>Registra tus hallazgos</h3><p className="muted">Describe cada problema que hayas encontrado.</p></div><button type="button" className="outline-button" onClick={()=>setReports([...reports,{description:'',severity:''}])}>+ Agregar hallazgo</button></div>{reports.map((report,i)=><div className="finding" key={i}><div className="finding-head"><strong>Hallazgo {i+1}</strong>{reports.length>1&&<button type="button" className="text-button" onClick={()=>setReports(reports.filter((_,j)=>j!==i))}>Quitar</button>}</div><label className="field-label">Descripción<textarea required minLength={20} maxLength={1500} value={report.description} onChange={e=>setReports(reports.map((r,j)=>j===i?{...r,description:e.target.value}:r))} placeholder="Pasos para reproducir, resultado actual y esperado…"/></label><label className="field-label">Severidad<select required value={report.severity} onChange={e=>setReports(reports.map((r,j)=>j===i?{...r,severity:e.target.value}:r))}><option value="">Elige una severidad</option><option>Crítica</option><option>Alta</option><option>Media</option><option>Baja</option></select></label></div>)}{error&&<p className="error">{error}</p>}<button className="primary" disabled={busy}>{busy?'Guardando evaluación…':'Enviar evaluación'} <span>→</span></button></form></section>}
     {stage==='done'&&<section className="question-card result-card"><div className="result-check">✓</div><div className="eyebrow">EVALUACIÓN COMPLETADA</div><h2>Gracias, {name.split(' ')[0]||'tester'}.</h2><p className="subcopy">Tu perfil está listo. Revisaremos tus respuestas y te contactaremos con pruebas acordes a tus habilidades.</p>{result&&<div className="score-panel"><div><span className="score-label">PUNTAJE</span><strong>{result.score}<small>/100</small></strong></div><div className="tag-list">{result.tags.map(tag=><span className="tag" key={tag}>{tag}</span>)}</div></div>}<p className="privacy-note">Tu solicitud fue guardada. Puedes cerrar esta página.</p></section>}
     {stage==='cancelled'&&<section className="question-card result-card"><div className="cancel-icon">!</div><div className="eyebrow">SOLICITUD CANCELADA</div><h2>La evaluación se detuvo.</h2><p className="subcopy">Detectamos cambios repetidos de pestaña o ventana. La solicitud quedó guardada como cancelada.</p></section>}
