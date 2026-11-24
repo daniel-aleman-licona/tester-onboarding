@@ -11,7 +11,7 @@ Evaluación de testers con React, TypeScript, Vite y Supabase. Una evaluación i
 ## Supabase
 
 - Aplica las migraciones en orden y publica `onboarding-intake` con `verify_jwt = false`. Las solicitudes públicas usan un token aleatorio por evaluación y las acciones de administración comprueban el rol con Supabase Auth. La clave de servicio se lee del entorno de Edge Functions.
-- En Authentication → Email Templates → Magic Link, aplica `supabase/templates/magic-link.html`. En el proveedor Email, verifica que el código tenga seis dígitos. Comprueba el envío al buzón autorizado y configura SMTP cuando el proveedor predeterminado no pueda entregarlo.
+- En Authentication → Email Templates → Magic Link, aplica `supabase/templates/magic-link.html`. El formulario acepta códigos de seis a diez dígitos, según la longitud configurada en el proveedor Email. Comprueba el envío al buzón autorizado y configura SMTP cuando el proveedor predeterminado no pueda entregarlo.
 - Usa una cuenta verificada de Supabase Auth y asigna el rol `admin` en sus metadatos de aplicación, conservando los demás campos. Tras cambiar el rol, cierra la sesión anterior y entra de nuevo desde `/#admin`.
 
 ## Vercel

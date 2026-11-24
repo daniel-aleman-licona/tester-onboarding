@@ -21,6 +21,8 @@ type Application = {
 
 const statuses = { in_progress: 'En curso', cancelled: 'Cancelada', completed: 'Completada' }
 const pageSize = 25
+const minOtpLength = 6
+const maxOtpLength = 10
 
 export default function Admin() {
   const [session, setSession] = useState<Session | null>(null)
@@ -39,6 +41,7 @@ export default function Admin() {
   const authorized = Boolean(token && checked?.token === token && checked.admin)
   const accessError = token && checked?.token === token ? checked.error : ''
   const seconds = Math.max(0, Math.ceil((resendAfter - clock) / 1000))
+  const codeReady = code.length >= minOtpLength && code.length <= maxOtpLength
 
   useEffect(() => {
     if (!supabase) return
@@ -115,6 +118,7 @@ export default function Admin() {
       if (!seconds) await sendOtp(email.trim().toLowerCase())
       return
     }
+    if (!codeReady) return
     setError('')
     setNotice('')
     setBusy(true)
@@ -174,12 +178,12 @@ export default function Admin() {
           <form onSubmit={(event)=>void login(event)} className="identity-form">
             <label>Correo de administración<input required type="email" autoComplete="email" value={email}
               onChange={(event)=>setEmail(event.target.value)} readOnly={Boolean(sentTo)} disabled={!supabase||busy}/></label>
-            {sentTo&&<label>Código de acceso<input required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6}
-              value={code} onChange={(event)=>setCode(event.target.value.replace(/\D/g, '').slice(0,6))} disabled={busy}/></label>}
+            {sentTo&&<label>Código de acceso<input required inputMode="numeric" autoComplete="one-time-code" pattern={`[0-9]{${minOtpLength},${maxOtpLength}}`}
+              value={code} onChange={(event)=>setCode(event.target.value.replace(/\D/g, '').slice(0, maxOtpLength))} disabled={busy}/></label>}
             {!supabase&&<p className="error" role="alert">{configurationError}</p>}
             {error&&<p className="error" role="alert">{error}</p>}
             {notice&&<p className="subcopy" role="status">{notice}</p>}
-            <button className="primary" disabled={!supabase||busy||(!sentTo&&seconds>0)||(Boolean(sentTo)&&code.length!==6)}>
+            <button className="primary" disabled={!supabase||busy||(sentTo ? !codeReady : seconds>0)}>
               {busy?'Conectando…':sentTo?'Verificar código':seconds?`Enviar código en ${seconds} s`:'Enviar código'} <span>→</span>
             </button>
             {sentTo&&<div className="admin-actions">
