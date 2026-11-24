@@ -79,14 +79,23 @@ export default function Admin() {
     setNotice('')
     try {
       const { error } = await supabase.auth.signInWithOtp({ email: address, options: { shouldCreateUser: false } })
-      if (!error || error.status === 429) {
+      const rateLimited = error?.status === 429
+      const deliveryUncertain = error?.code === 'request_timeout' || error?.status === 502 || error?.status === 503 || error?.status === 504
+      if (!error || rateLimited || deliveryUncertain) {
         const now = Date.now()
         setClock(now)
         setResendAfter(now + 60_000)
       }
+      if (deliveryUncertain) {
+        setSentTo(address)
+        setError('El servicio de correo no confirmó el envío a tiempo. Si recibes un código, ingrésalo aquí. Si no llega, espera antes de pedir otro.')
+        return
+      }
       if (error) {
-        setError(error.status === 429 ? 'Se alcanzó el límite de envíos. Espera antes de solicitar otro código.'
-          : 'No pudimos enviar un código a ese correo. Verifica la dirección o vuelve a intentarlo.')
+        if (rateLimited) setError('Se alcanzó el límite de envíos. Espera antes de solicitar otro código.')
+        else if (error.code === 'email_address_not_authorized') setError('El proveedor de correo no permite enviar códigos a esta dirección.')
+        else if ((error.status ?? 0) >= 500) setError('El servicio de correo no pudo enviar el código. Intenta más tarde.')
+        else setError('No pudimos enviar un código a ese correo. Verifica la dirección o vuelve a intentarlo.')
         return
       }
       setCode('')
@@ -161,7 +170,7 @@ export default function Admin() {
           {error&&<p className="error" role="alert">{error}</p>}
           <button className="outline-button" disabled={busy} onClick={()=>void logout()}>Usar otro correo</button>
         </> : <>
-          <p className="subcopy">{sentTo?'Ingresa el código de un solo uso que enviamos a tu correo.':'Te enviaremos un código de acceso de un solo uso a tu correo.'}</p>
+          <p className="subcopy">{sentTo?'Ingresa el código de un solo uso que recibas por correo.':'Te enviaremos un código de acceso de un solo uso a tu correo.'}</p>
           <form onSubmit={(event)=>void login(event)} className="identity-form">
             <label>Correo de administración<input required type="email" autoComplete="email" value={email}
               onChange={(event)=>setEmail(event.target.value)} readOnly={Boolean(sentTo)} disabled={!supabase||busy}/></label>
