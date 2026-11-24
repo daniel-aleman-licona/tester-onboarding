@@ -18,7 +18,7 @@ Sin variables de Supabase, la app queda en modo de vista previa y conserva solic
 2. Inicia sesión en Supabase CLI con `npx supabase login`, vincula este proyecto con `npx supabase link --project-ref <PROJECT_REF>` y aplica el esquema con `npx supabase db push`.
 3. Configura `SUPABASE_SERVICE_ROLE_KEY` como secreto de Supabase Functions; nunca lo pongas en `.env.local` ni en variables `VITE_`.
 4. Despliega la función pública de recepción con `npx supabase functions deploy onboarding-intake`.
-5. Crea una cuenta compartida de correo y contraseña en Supabase Auth. En el panel de Supabase, marca `app_metadata.role` con el valor `admin` para esa cuenta. RLS solo permite leer resultados a sesiones con ese claim. La contraseña compartida se introduce en el campo “Código de acceso” del panel.
+5. Crea la cuenta de administración en Supabase Auth y marca `app_metadata.role` con el valor `admin`; RLS solo permite leer resultados a sesiones con ese claim. El panel envía un código de un solo uso al correo y lo valida directamente, sin contraseña compartida. En Authentication → Email Templates → Magic Link, incluye `{{ .Token }}` en el contenido del correo para que el código de seis dígitos sea visible. `signInWithOtp` usa ese mismo correo; si la plantilla solo muestra `{{ .ConfirmationURL }}`, se recibe un enlace en lugar del código.
 
 La tabla `public.tester_applications` tiene RLS habilitado. La función de recepción valida un token aleatorio por solicitud antes de guardar respuestas, y calcula el puntaje y las etiquetas en el servidor.
 
