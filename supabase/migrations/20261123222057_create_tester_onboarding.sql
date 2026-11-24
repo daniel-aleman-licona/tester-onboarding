@@ -15,7 +15,6 @@ create table if not exists public.tester_applications (
 alter table public.tester_applications enable row level security;
 revoke all on public.tester_applications from anon, authenticated;
 grant select on public.tester_applications to authenticated;
-grant select, insert, update on public.tester_applications to service_role;
 
 create policy "Only admins can view tester applications"
 on public.tester_applications

@@ -1,0 +1,90 @@
+[
+  {
+    "id": "regression",
+    "title": "¿Qué busca una prueba de regresión?",
+    "hint": "Elige la opción más precisa.",
+    "options": [
+      {
+        "id": "0",
+        "label": "Medir la velocidad de la red"
+      },
+      {
+        "id": "1",
+        "label": "Confirmar que cambios recientes no rompieron funciones existentes"
+      },
+      {
+        "id": "2",
+        "label": "Revisar únicamente el diseño visual"
+      }
+    ],
+    "multi": false,
+    "active": true,
+    "correct": "1"
+  },
+  {
+    "id": "severity",
+    "title": "Encuentras que nadie puede completar el pago. ¿Cómo lo clasificarías?",
+    "hint": "Piensa en el impacto para quien usa el producto.",
+    "options": [
+      {
+        "id": "0",
+        "label": "Bajo: detalle visual"
+      },
+      {
+        "id": "1",
+        "label": "Medio: hay una alternativa sencilla"
+      },
+      {
+        "id": "2",
+        "label": "Crítico: bloquea una función principal"
+      }
+    ],
+    "multi": false,
+    "active": true,
+    "correct": "2"
+  },
+  {
+    "id": "smoke",
+    "title": "¿Para qué sirve una prueba smoke?",
+    "hint": "Selecciona su objetivo principal.",
+    "options": [
+      {
+        "id": "0",
+        "label": "Comprobar rápidamente que lo esencial funciona"
+      },
+      {
+        "id": "1",
+        "label": "Probar todos los casos límite"
+      },
+      {
+        "id": "2",
+        "label": "Reemplazar las pruebas de regresión"
+      }
+    ],
+    "multi": false,
+    "active": true,
+    "correct": "0"
+  },
+  {
+    "id": "api",
+    "title": "Al probar una API, ¿qué revisarías además del código de respuesta?",
+    "hint": "Una respuesta 200 no garantiza que todo esté bien.",
+    "options": [
+      {
+        "id": "0",
+        "label": "Solo el tiempo del teclado"
+      },
+      {
+        "id": "1",
+        "label": "El contenido, formato y datos de la respuesta"
+      },
+      {
+        "id": "2",
+        "label": "El color del botón"
+      }
+    ],
+    "multi": false,
+    "active": true,
+    "correct": "1"
+  }
+]

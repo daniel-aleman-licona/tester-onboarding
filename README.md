@@ -1,27 +1,29 @@
 # QA Talent Onboarding
 
-Onboarding de testers creado con React, TypeScript, Vite y Supabase. Incluye preguntas condicionales, un ejercicio práctico con defectos intencionales, resultados y un panel protegido de administración.
+Evaluación de testers con React, TypeScript, Vite y Supabase. Una evaluación incluye preguntas de perfil, un reto práctico y un resultado calculado en Supabase. El admin gestiona el cuestionario y consulta las solicitudes, respuestas y hallazgos.
 
 ## Desarrollo
 
-```sh
-npm install
-copy .env.example .env.local
-npm run dev
-```
+1. Instala las dependencias con `npm ci`.
+2. Copia `.env.example` a `.env.local`. Configura `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` con los valores del proyecto. También se admite la variable anterior `VITE_SUPABASE_ANON_KEY`.
+3. Ejecuta `npm run dev`. Si quieres un demo local sin Supabase, activa `VITE_ONBOARDING_DEMO=true`. El demo solo está disponible en el servidor de desarrollo y guarda en ese navegador.
 
-Sin variables de Supabase, la app queda en modo de vista previa y conserva solicitudes en el almacenamiento local del navegador. Para persistencia compartida y administración, configura el proyecto siguiendo los pasos de abajo.
+## Supabase
 
-## Configurar Supabase
+- Aplica las migraciones en orden y publica `onboarding-intake` con `verify_jwt = false`. Las solicitudes públicas usan un token aleatorio por evaluación y las acciones de administración comprueban el rol con Supabase Auth. La clave de servicio se lee del entorno de Edge Functions.
+- En Authentication → Email Templates → Magic Link, aplica `supabase/templates/magic-link.html`. En el proveedor Email, verifica que el código tenga seis dígitos. Comprueba el envío al buzón autorizado y configura SMTP cuando el proveedor predeterminado no pueda entregarlo.
+- Usa una cuenta verificada de Supabase Auth y asigna el rol `admin` en sus metadatos de aplicación, conservando los demás campos. Tras cambiar el rol, cierra la sesión anterior y entra de nuevo desde `/#admin`.
 
-1. Copia la URL y la clave publicable (o anon heredada) del proyecto a `.env.local` como `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
-2. Inicia sesión en Supabase CLI con `npx supabase login`, vincula este proyecto con `npx supabase link --project-ref <PROJECT_REF>` y aplica el esquema con `npx supabase db push`.
-3. Configura `SUPABASE_SERVICE_ROLE_KEY` como secreto de Supabase Functions; nunca lo pongas en `.env.local` ni en variables `VITE_`.
-4. Despliega la función pública de recepción con `npx supabase functions deploy onboarding-intake`.
-5. Crea la cuenta de administración en Supabase Auth y marca `app_metadata.role` con el valor `admin`; RLS solo permite leer resultados a sesiones con ese claim. El panel envía un código de un solo uso al correo y lo valida directamente, sin contraseña compartida. En Authentication → Email Templates → Magic Link, incluye `{{ .Token }}` en el contenido del correo para que el código de seis dígitos sea visible. `signInWithOtp` usa ese mismo correo; si la plantilla solo muestra `{{ .ConfirmationURL }}`, se recibe un enlace en lugar del código.
+## Vercel
 
-La tabla `public.tester_applications` tiene RLS habilitado. La función de recepción valida un token aleatorio por solicitud antes de guardar respuestas, y calcula el puntaje y las etiquetas en el servidor.
+Configura un proyecto Vite vinculado al repositorio. Define `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en Preview y Production. El build valida la configuración. La clave de servicio solo se usa en Supabase.
 
-## Alcance de los controles de foco
+Aplica las migraciones, publica la función y verifica el flujo desde Preview antes de publicar la versión en el dominio de producción.
 
-La aplicación registra pérdida de foco/cambio de pestaña y advierte en el primer evento; el segundo evento cancela la solicitud. El navegador no permite que una página web bloquee de forma fiable extensiones, DevTools o el cierre de una pestaña. `beforeunload` solo muestra la advertencia nativa del navegador.
+## Cambios en el cuestionario
+
+En Admin → Preguntas, publica los cambios cuando estén listos. Cada solicitud conserva la versión vigente cuando empezó. Experiencia, Habilidades y las preguntas condicionales conservan sus reglas de perfil.
+
+## Controles de foco
+
+La aplicación registra cambios de ventana o pestaña durante la evaluación. El primer cambio genera un aviso y el segundo cancela la solicitud. La página depende de las señales que el navegador permite observar.
